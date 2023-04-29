@@ -27,7 +27,6 @@
 
 """
 
-import datetime
 import struct
 import sys
 
@@ -99,8 +98,7 @@ def read_zero_terminated_string(fp):
         c = fp.read(1)
         if c == b"\x00":
             return s.decode().strip()
-        else:
-            s += c
+        s += c
 
 
 def read_fixed_length_string(fp, n):
@@ -316,18 +314,18 @@ def parse_fxdparams_block(fp):
         "sample_spacing": read_unsigned4(fp),
         "number_of_data_points": read_unsigned4(fp),
         "index_of_refraction": read_unsigned4(fp) / 100000,
-        "backscattering_coefficient": read_unsigned2(fp),
+        "backscattering_coefficient": read_unsigned2(fp) * -0.1,
         "number_of_averages": read_unsigned4(fp),
         "averaging_time": read_unsigned2(fp),
-        "range": read_unsigned4(fp),
+        "range": read_unsigned4(fp) * 2 * 10**5,
         "acquisition_range_distance": read_signed4(fp),
         "front_panel_offset": read_signed4(fp),
         "noise_floor_level": read_unsigned2(fp),
         "noise_floor_scaling_factor": read_signed2(fp),
         "power_offset_first_point": read_unsigned2(fp),
-        "loss_threshold": read_unsigned2(fp),
-        "reflection_threshold": read_unsigned2(fp),
-        "end_of_transmission_threshold": read_unsigned2(fp),
+        "loss_threshold": read_unsigned2(fp) * 0.001,
+        "reflection_threshold": read_unsigned2(fp) * 0.001,
+        "end_of_transmission_threshold": read_unsigned2(fp) * -0.001,
         "trace_type": read_fixed_length_string(fp, 2),
         "x1": read_signed4(fp),
         "y1": read_signed4(fp),
@@ -340,7 +338,7 @@ def parse_fxdparams_block(fp):
     return data
 
 
-def parse_datapts_block(fp, pulse_width, sample_spacing):
+def parse_datapts_block(fp, sample_spacing):
     """Parse Data Points block."""
 
     data = {
@@ -411,6 +409,8 @@ def parse_keyevents_block(fp, index_of_refraction):
 
 
 def parse_chksum_block(fp):
+    """Parse Chksum block."""
+
     return {
         "name": read_zero_terminated_string(fp),
         "chksum": f"{read_unsigned2(fp):04x}",
@@ -434,6 +434,8 @@ def parse_unknown_block(fp, n):
 
 
 def parse(fp):
+    """The ``parse()`` function is the public interface of this library."""
+
     # The Map block is always the first block in the file.
     #
     blocks = [parse_map_block(fp)]
@@ -442,7 +444,7 @@ def parse(fp):
     # be updated in the big if/elif/else block below but I list
     # them already here for clarity.
     #
-    pulse_width = None
+    # pulse_width = None
     sample_spacing = None
     index_of_refraction = None
 
@@ -457,11 +459,11 @@ def parse(fp):
             blocks += [parse_supparams_block(fp)]
         elif block_name == "FxdParams":
             blocks += [parse_fxdparams_block(fp)]
-            pulse_width = blocks[-1]["pulse_width"]
+            # pulse_width = blocks[-1]["pulse_width"]
             sample_spacing = blocks[-1]["sample_spacing"]
             index_of_refraction = blocks[-1]["index_of_refraction"]
         elif block_name == "DataPts":
-            blocks += [parse_datapts_block(fp, pulse_width, sample_spacing)]
+            blocks += [parse_datapts_block(fp, sample_spacing)]
         elif block_name == "KeyEvents":
             blocks += [parse_keyevents_block(fp, index_of_refraction)]
         elif block_name == "Cksum":
@@ -479,11 +481,12 @@ if __name__ == "__main__":
     import json
 
     class BytesEncoder(json.JSONEncoder):
-        # https://researchdatapod.com/how-to-solve-python-typeerror-object-of-type-bytes-is-not-json-serializable/
-        def default(self, obj):
-            if isinstance(obj, bytes):
-                return ''.join([f"{x:02x}" for x in obj])
-            return json.JSONEncoder.default(self, obj)
+        """Custom JSON Encoder that can handle bytes."""
 
-    with open(sys.argv[1], "rb") as fp:
-        json.dump(parse(fp), sys.stdout, cls=BytesEncoder, indent=2)
+        def default(self, o):
+            if isinstance(o, bytes):
+                return "".join([f"{x:02x}" for x in o])
+            return json.JSONEncoder.default(self, o)
+
+    with open(sys.argv[1], "rb") as fo:
+        json.dump(parse(fo), sys.stdout, cls=BytesEncoder, indent=2)
