@@ -474,19 +474,3 @@ def parse(fp):
     return blocks
 
 
-if __name__ == "__main__":
-    # This is not intended to be executed directly but I use it to prepare
-    # the example JSON files in the repository.
-
-    import json
-
-    class BytesEncoder(json.JSONEncoder):
-        """Custom JSON Encoder that can handle bytes."""
-
-        def default(self, o):
-            if isinstance(o, bytes):
-                return "".join([f"{x:02x}" for x in o])
-            return json.JSONEncoder.default(self, o)
-
-    with open(sys.argv[1], "rb") as fo:
-        json.dump(parse(fo), sys.stdout, cls=BytesEncoder, indent=2)
