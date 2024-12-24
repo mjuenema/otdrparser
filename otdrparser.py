@@ -90,15 +90,15 @@ def read_zero_terminated_string(fp):
         fp (file): File object of the opened SOR file.
 
     Returns:
-        unicode: Read unicode string, stripped off leading and trailing white space.
+        string: Read string, stripped off leading and trailing white space.
     """
 
-    s = b""
+    s = bytes()
     while True:
         c = fp.read(1)
         if c == b"\x00":
-            return s.decode().strip()
-        s += c
+            return s.strip()
+        s += bytes(c)
 
 
 def read_fixed_length_string(fp, n):
