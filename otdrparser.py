@@ -137,9 +137,6 @@ def read_unsigned4(fp):
     Returns:
         int: The bytes read interpreted as an unsigned integer.
 
-    Known issue:
-        Some OTDR traces 
-
     """
 
     return struct.unpack("<I", fp.read(4))[0]
