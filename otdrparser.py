@@ -136,6 +136,10 @@ def read_unsigned4(fp):
 
     Returns:
         int: The bytes read interpreted as an unsigned integer.
+
+    Known issue:
+        Some OTDR traces 
+
     """
 
     return struct.unpack("<I", fp.read(4))[0]
@@ -243,7 +247,7 @@ def parse_map_block(fp):
             {
                 "name": read_zero_terminated_string(fp),
                 "version": str(read_unsigned2(fp) / 100),
-                "numbytes": read_unsigned4(fp),
+                "numbytes": read_unsigned4(fp),     # Some *.sor files only have 2 bytes left here and cannot be parsed!!!
             }
         )
 

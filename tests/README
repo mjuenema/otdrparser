@@ -1,0 +1,26 @@
+Very simple tests to verify that some sample data can be parsed without errors.
+
+The OTDR samples have been copied from the following sources:
+
+https://github.com/sid5432/pyOTDR
+* demo_ab.sor
+* M200_Sample_005_S13.sor
+* sample1310_lowDR.sor 
+
+https://github.com/JamesHarrison/otdrs
+* example1-noyes-ofl280-fastreporter-save.sor
+* example1-noyes-ofl280.sor
+* example2-exfo-maxtester730c.sor
+* example3-anritsu-accessmastermt9085.sor
+* example4-exfo-ftb4ftbx730c-mfdgainer-1310nm.sor
+* example4-exfo-ftb4ftbx730c-mfdgainer-1550nm.sor
+* example5-exfo-rtu2ftbx735c-sm7r-ea-hrd.sor
+
+https://github.com/mjuenema/otdrparser/issues/4
+* otdr1.sor
+* otdr2.sor
+* otdr3.sor
+* otdr4.sor
+* otdr5.sor
+* otdr6.sor
+* otdr7.sor
