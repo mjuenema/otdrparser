@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "otdrparser"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python library for parsing OTDR files in Telcordia SR-4731 Version 2 format"
 authors = ["Markus Juenemann <markus@juenemann.net>"]
 license = "BSD 2-Clause License"
