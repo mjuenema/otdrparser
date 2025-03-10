@@ -29,6 +29,7 @@
 
 import struct
 import sys
+import io
 
 FIBER_TYPES = {
     651: "ITU-T G.651 (multi-mode fiber)",
@@ -90,15 +91,16 @@ def read_zero_terminated_string(fp):
         fp (file): File object of the opened SOR file.
 
     Returns:
-        string: Read string, stripped off leading and trailing white space.
+        unicode: Read unicode string, stripped off leading and trailing white space.
     """
 
-    s = bytes()
+    s = b""
     while True:
         c = fp.read(1)
+
         if c == b"\x00":
-            return s.strip()
-        s += bytes(c)
+            return s.decode().strip()
+        s += c
 
 
 def read_fixed_length_string(fp, n):
@@ -136,7 +138,6 @@ def read_unsigned4(fp):
 
     Returns:
         int: The bytes read interpreted as an unsigned integer.
-
     """
 
     return struct.unpack("<I", fp.read(4))[0]
@@ -244,31 +245,35 @@ def parse_map_block(fp):
             {
                 "name": read_zero_terminated_string(fp),
                 "version": str(read_unsigned2(fp) / 100),
-                "numbytes": read_unsigned4(fp),     # Some *.sor files only have 2 bytes left here and cannot be parsed!!!
+                "numbytes": read_unsigned4(fp),
             }
         )
 
     return data
 
 
-def parse_genparams_block(fp):
+def parse_genparams_block(fp, block_numbytes):
     """Parse a General parameters block."""
 
+    block_fp = io.BytesIO(fp.read(block_numbytes))
+
     data = {
-        "name": read_zero_terminated_string(fp),
-        "cable_id": read_zero_terminated_string(fp),
-        "fiber_id": read_zero_terminated_string(fp),
-        "fiber_type": read_unsigned2(fp),
-        "wavelength": read_unsigned2(fp),
-        "location_a": read_zero_terminated_string(fp),
-        "location_b": read_zero_terminated_string(fp),
-        "cable_code": read_zero_terminated_string(fp),
-        "build_condition": read_fixed_length_string(fp, 2),
-        "user_offset": read_unsigned4(fp),
-        "user_offset_distance": read_unsigned4(fp),
-        "operator": read_zero_terminated_string(fp),
-        "comments": read_zero_terminated_string(fp),
+        "name": read_zero_terminated_string(block_fp),
+        "cable_id": read_zero_terminated_string(block_fp),
+        "fiber_id": read_zero_terminated_string(block_fp),
+        "fiber_type": read_unsigned2(block_fp),
+        "wavelength": read_unsigned2(block_fp),
+        "location_a": read_zero_terminated_string(block_fp),
+        "location_b": read_zero_terminated_string(block_fp),
+        "cable_code": read_zero_terminated_string(block_fp),
+        "build_condition": read_fixed_length_string(block_fp, 2),
+        "user_offset": read_unsigned4(block_fp),
+        "user_offset_distance": read_unsigned4(block_fp),
+        "operator": read_zero_terminated_string(block_fp),
+        "comments": read_zero_terminated_string(block_fp),
     }
+
+    block_fp.close()
 
     data["fiber_type_description"] = FIBER_TYPES.get(data["fiber_type"])
     data["build_condition_description"] = BUILD_CONDITIONS.get(data["build_condition"])
@@ -276,24 +281,28 @@ def parse_genparams_block(fp):
     return data
 
 
-def parse_supparams_block(fp):
+def parse_supparams_block(fp, block_numbytes):
     """Parse a Supplier parameters block."""
 
+    block_fp = io.BytesIO(fp.read(block_numbytes))
+
     data = {
-        "name": read_zero_terminated_string(fp),
-        "supplier_name": read_zero_terminated_string(fp),
-        "otdr_name": read_zero_terminated_string(fp),
-        "otdr_serial_number": read_zero_terminated_string(fp),
-        "module_name": read_zero_terminated_string(fp),
-        "module_serial_number": read_zero_terminated_string(fp),
-        "software_version": read_zero_terminated_string(fp),
-        "other": read_zero_terminated_string(fp),
+        "name": read_zero_terminated_string(block_fp),
+        "supplier_name": read_zero_terminated_string(block_fp),
+        "otdr_name": read_zero_terminated_string(block_fp),
+        "otdr_serial_number": read_zero_terminated_string(block_fp),
+        "module_name": read_zero_terminated_string(block_fp),
+        "module_serial_number": read_zero_terminated_string(block_fp),
+        "software_version": read_zero_terminated_string(block_fp),
+        "other": read_zero_terminated_string(block_fp),
     }
+
+    block_fp.close()
 
     return data
 
 
-def parse_fxdparams_block(fp):
+def parse_fxdparams_block(fp, block_numbytes):
     """Parse a Fixed Parameters block.
 
     A limitation of this function is that only a single pulse width
@@ -303,51 +312,57 @@ def parse_fxdparams_block(fp):
 
     """
 
+    block_fp = io.BytesIO(fp.read(block_numbytes))
+
     data = {
-        "name": read_zero_terminated_string(fp),
-        "date_time": read_unsigned4(fp),
-        "units": read_fixed_length_string(fp, 2),
-        "wavelength": read_unsigned2(fp) / 10,
-        "acqusition_offset": read_signed4(fp),
-        "acqusition_offset_distance": read_signed4(fp),
-        "number_of_pulse_width_entries": read_unsigned2(fp),
-        "pulse_width": read_unsigned2(fp),
-        "sample_spacing": read_unsigned4(fp),
-        "number_of_data_points": read_unsigned4(fp),
-        "index_of_refraction": read_unsigned4(fp) / 100000,
-        "backscattering_coefficient": read_unsigned2(fp) * -0.1,
-        "number_of_averages": read_unsigned4(fp),
-        "averaging_time": read_unsigned2(fp),
-        "range": read_unsigned4(fp) * 2 * 10**5,
-        "acquisition_range_distance": read_signed4(fp),
-        "front_panel_offset": read_signed4(fp),
-        "noise_floor_level": read_unsigned2(fp),
-        "noise_floor_scaling_factor": read_signed2(fp),
-        "power_offset_first_point": read_unsigned2(fp),
-        "loss_threshold": read_unsigned2(fp) * 0.001,
-        "reflection_threshold": read_unsigned2(fp) * 0.001,
-        "end_of_transmission_threshold": read_unsigned2(fp) * -0.001,
-        "trace_type": read_fixed_length_string(fp, 2),
-        "x1": read_signed4(fp),
-        "y1": read_signed4(fp),
-        "x2": read_signed4(fp),
-        "y2": read_signed4(fp),
+        "name": read_zero_terminated_string(block_fp),
+        "date_time": read_unsigned4(block_fp),
+        "units": read_fixed_length_string(block_fp, 2),
+        "wavelength": read_unsigned2(block_fp) / 10,
+        "acqusition_offset": read_signed4(block_fp),
+        "acqusition_offset_distance": read_signed4(block_fp),
+        "number_of_pulse_width_entries": read_unsigned2(block_fp),
+        "pulse_width": read_unsigned2(block_fp),
+        "sample_spacing": read_unsigned4(block_fp),
+        "number_of_data_points": read_unsigned4(block_fp),
+        "index_of_refraction": read_unsigned4(block_fp) / 100000,
+        "backscattering_coefficient": read_unsigned2(block_fp) * -0.1,
+        "number_of_averages": read_unsigned4(block_fp),
+        "averaging_time": read_unsigned2(block_fp),
+        "range": read_unsigned4(block_fp) * 2 * 10**5,
+        "acquisition_range_distance": read_signed4(block_fp),
+        "front_panel_offset": read_signed4(block_fp),
+        "noise_floor_level": read_unsigned2(block_fp),
+        "noise_floor_scaling_factor": read_signed2(block_fp),
+        "power_offset_first_point": read_unsigned2(block_fp),
+        "loss_threshold": read_unsigned2(block_fp) * 0.001,
+        "reflection_threshold": read_unsigned2(block_fp) * 0.001,
+        "end_of_transmission_threshold": read_unsigned2(block_fp) * -0.001,
+        "trace_type": read_fixed_length_string(block_fp, 2),
+        "x1": read_signed4(block_fp),
+        "y1": read_signed4(block_fp),
+        "x2": read_signed4(block_fp),
+        "y2": read_signed4(block_fp),
     }
+
+    block_fp.close()
 
     data["trace_type_description"] = TRACE_TYPES.get(data["trace_type"])
 
     return data
 
 
-def parse_datapts_block(fp, sample_spacing):
+def parse_datapts_block(fp, block_numbytes, sample_spacing):
     """Parse Data Points block."""
 
+    block_fp = io.BytesIO(fp.read(block_numbytes))
+
     data = {
-        "name": read_zero_terminated_string(fp),
-        "number_of_data_points": read_unsigned4(fp),
-        "number_of_traces": read_unsigned2(fp),
-        "number_of_data_points2": read_unsigned4(fp),
-        "scaling_factor": read_unsigned2(fp),
+        "name": read_zero_terminated_string(block_fp),
+        "number_of_data_points": read_unsigned4(block_fp),
+        "number_of_traces": read_unsigned2(block_fp),
+        "number_of_data_points2": read_unsigned4(block_fp),
+        "scaling_factor": read_unsigned2(block_fp),
         "data_points": [],
     }
 
@@ -355,36 +370,40 @@ def parse_datapts_block(fp, sample_spacing):
         data["data_points"].append(
             (
                 n * sample_spacing / 100000000 * C_M,
-                read_unsigned2(fp) * -data["scaling_factor"] / 1000000,
+                read_unsigned2(block_fp) * -data["scaling_factor"] / 1000000,
             )
         )
+
+    block_fp.close()
 
     return data
 
 
-def parse_keyevents_block(fp, index_of_refraction):
+def parse_keyevents_block(fp, block_numbytes, index_of_refraction):
     """Parse Key Events block."""
 
+    block_fp = io.BytesIO(fp.read(block_numbytes))
+
     data = {
-        "name": read_zero_terminated_string(fp),
-        "number_of_events": read_unsigned2(fp),
+        "name": read_zero_terminated_string(block_fp),
+        "number_of_events": read_unsigned2(block_fp),
         "events": [],
     }
 
     for _ in range(0, data["number_of_events"]):
         event = {
-            "event_number": read_unsigned2(fp),
-            "time_of_travel": read_unsigned4(fp) * 0.1,
-            "slope": read_signed2(fp) * 0.001,
-            "splice_loss": read_signed2(fp) * 0.001,
-            "reflection_loss": read_signed4(fp) * 0.001,
-            "event_type": read_fixed_length_string(fp, 8),
-            "end_of_previous_event": read_unsigned4(fp),
-            "beginning_of_current_event": read_unsigned4(fp),
-            "end_of_current_event": read_unsigned4(fp),
-            "beginning_of_next_event": read_unsigned4(fp),
-            "peak_point": read_unsigned4(fp),
-            "comment": read_zero_terminated_string(fp),
+            "event_number": read_unsigned2(block_fp),
+            "time_of_travel": read_unsigned4(block_fp) * 0.1,
+            "slope": read_signed2(block_fp) * 0.001,
+            "splice_loss": read_signed2(block_fp) * 0.001,
+            "reflection_loss": read_signed4(block_fp) * 0.001,
+            "event_type": read_fixed_length_string(block_fp, 8),
+            "end_of_previous_event": read_unsigned4(block_fp),
+            "beginning_of_current_event": read_unsigned4(block_fp),
+            "end_of_current_event": read_unsigned4(block_fp),
+            "beginning_of_next_event": read_unsigned4(block_fp),
+            "peak_point": read_unsigned4(block_fp),
+            "comment": read_zero_terminated_string(block_fp),
         }
 
         event["distance_of_travel"] = (
@@ -397,28 +416,37 @@ def parse_keyevents_block(fp, index_of_refraction):
 
     data.update(
         {
-            "total_loss": read_signed4(fp) * 0.001,
-            "fiber_start_position": read_signed4(fp),
-            "fiber_length": read_unsigned4(fp),
-            "optical_return_loss": read_unsigned2(fp) * 0.001,
-            "fiber_start_position2": read_signed4(fp),
-            "fiber_length2": read_unsigned4(fp),
+            "total_loss": read_signed4(block_fp) * 0.001,
+            "fiber_start_position": read_signed4(block_fp),
+            "fiber_length": read_unsigned4(block_fp),
+            "optical_return_loss": read_unsigned2(block_fp) * 0.001,
+            "fiber_start_position2": read_signed4(block_fp),
+            "fiber_length2": read_unsigned4(block_fp),
         }
     )
+
+    block_fp.close()
 
     return data
 
 
-def parse_chksum_block(fp):
+def parse_chksum_block(fp, block_numbytes):
     """Parse Chksum block."""
 
-    return {
-        "name": read_zero_terminated_string(fp),
-        "chksum": f"{read_unsigned2(fp):04x}",
+
+    block_fp = io.BytesIO(fp.read(block_numbytes))
+
+    data = {
+        "name": read_zero_terminated_string(block_fp),
+        "chksum": f"{read_unsigned2(block_fp):04x}",
     }
 
+    block_fp.close()
 
-def parse_unknown_block(fp, n):
+    return data
+
+
+def parse_unknown_block(fp, block_numbytes):
     """Read an unknown block.
 
        Only the `name` is parsed and the rest of the block is returned
@@ -429,9 +457,17 @@ def parse_unknown_block(fp, n):
         n (int): The size of the block, including its name.
     """
 
-    name = read_zero_terminated_string(fp)
+    block_fp = io.BytesIO(fp.read(block_numbytes))
 
-    return {"name": name, "content": fp.read(n - len(name) - 1)}
+    name = read_zero_terminated_string(block_fp)
+
+    data = {"name": name, "content": block_fp.read(block_numbytes - len(name) - 1)}
+
+    block_fp.close()
+
+    return data
+
+
 
 
 def parse(fp):
@@ -453,25 +489,37 @@ def parse(fp):
     #
     for entry in blocks[0]["maps"]:
         block_name = entry["name"]
+        block_version = entry['version']
+        block_numbytes = entry['numbytes']
 
         if block_name == "GenParams":
-            blocks += [parse_genparams_block(fp)]
+            blocks += [parse_genparams_block(fp, block_numbytes)]
         elif block_name == "SupParams":
-            blocks += [parse_supparams_block(fp)]
+            blocks += [parse_supparams_block(fp, block_numbytes)]
         elif block_name == "FxdParams":
-            blocks += [parse_fxdparams_block(fp)]
+            blocks += [parse_fxdparams_block(fp, block_numbytes)]
             # pulse_width = blocks[-1]["pulse_width"]
             sample_spacing = blocks[-1]["sample_spacing"]
             index_of_refraction = blocks[-1]["index_of_refraction"]
         elif block_name == "DataPts":
-            blocks += [parse_datapts_block(fp, sample_spacing)]
+            blocks += [parse_datapts_block(fp, block_numbytes, sample_spacing)]
         elif block_name == "KeyEvents":
-            blocks += [parse_keyevents_block(fp, index_of_refraction)]
+            blocks += [parse_keyevents_block(fp, block_numbytes, index_of_refraction)]
         elif block_name == "Cksum":
-            blocks += [parse_chksum_block(fp)]
+            blocks += [parse_chksum_block(fp, block_numbytes)]
         else:
-            blocks += [parse_unknown_block(fp, entry["numbytes"])]
+            blocks += [parse_unknown_block(fp, block_numbytes)]
 
     return blocks
+
+
+
+if __name__ == '__main__':
+    import sys
+    with open(sys.argv[1], 'rb') as fp:
+        blocks = parse(fp)
+
+    for block in blocks:
+        print(block['name'])
 
 
