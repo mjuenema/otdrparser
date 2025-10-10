@@ -352,7 +352,7 @@ def parse_fxdparams_block(fp, block_numbytes):
     return data
 
 
-def parse_datapts_block(fp, block_numbytes, sample_spacing):
+def parse_datapts_block(fp, block_numbytes, sample_spacing, index_of_refraction):
     """Parse Data Points block."""
 
     block_fp = io.BytesIO(fp.read(block_numbytes))
@@ -369,7 +369,7 @@ def parse_datapts_block(fp, block_numbytes, sample_spacing):
     for n in range(0, data["number_of_data_points"]):
         data["data_points"].append(
             (
-                n * sample_spacing / 100000000 * C_M,
+                n * sample_spacing / 100000000 * C_M / index_of_refraction,
                 read_unsigned2(block_fp) * -data["scaling_factor"] / 1000000,
             )
         )
@@ -502,7 +502,7 @@ def parse(fp):
             sample_spacing = blocks[-1]["sample_spacing"]
             index_of_refraction = blocks[-1]["index_of_refraction"]
         elif block_name == "DataPts":
-            blocks += [parse_datapts_block(fp, block_numbytes, sample_spacing)]
+            blocks += [parse_datapts_block(fp, block_numbytes, sample_spacing, index_of_refraction)]
         elif block_name == "KeyEvents":
             blocks += [parse_keyevents_block(fp, block_numbytes, index_of_refraction)]
         elif block_name == "Cksum":
