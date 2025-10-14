@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## 0.1.5 - 10-10-2025
+## 0.1.5 - 14-10-2025
 * Fixed mis-spelled 'acquisition' (https://github.com/mjuenema/otdrparser/issues/11)
 
 ## 0.1.4 - 10-10-2025
