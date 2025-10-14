@@ -1,14 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## 0.1.5 - 14-10-2025
+## 0.1.5 - 2025-10-14
 * Fixed mis-spelled 'acquisition' (https://github.com/mjuenema/otdrparser/issues/11)
 
-## 0.1.4 - 10-10-2025
+## 0.1.4 - 2025-10-10
 * Fixed issue that index of refraction was not considered when calculating distances (https://github.com/mjuenema/otdrparser/issues/9)
 * Added ``tools/sor2png.py`` script to plot OTDR traces as PNG file.
 
-## 0.1.3 - 10-05-2025
+## 0.1.3 - 2025-05-10
 * Read whole block first before parsing it instead of parsing the data while reading it.
 
 ## 0.1.2 - 2024-12-24
