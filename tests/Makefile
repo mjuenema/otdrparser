@@ -1,4 +1,4 @@
 
 
 test:
-	nosetests tests.py
+	nosetests -v -s tests.py
