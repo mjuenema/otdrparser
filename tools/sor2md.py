@@ -55,19 +55,29 @@ import jinja2
 # Jinja 2 templates
 #
 
-HEADER_TEMPLATE = """
+TEMPLATE = """
 # OTDR Report
 **Created on {{ created }}
-"""
 
-OVERVIEW_TEMPLATE = """
 ## Overview
 
-|File |Wavelength [nm]|Distance [m]|Loss [dB]|Loss/Km [dB]|Events|
+|File |Wavelength [nm]|Distance|Loss [dB]|Loss/Km [dB]|Events|
 | :------------ |------------ |------------ |--- |--- |
-{%- for 
-|25250-1-1_1310.sor |1310|2300|7.5|1.2|5|
+{%- for (filename, parsed) in traces %}
+|{{filename}}|{{parsed['FxdParams']['wavelength']}}|{{parsed['KeyEvents']['fiber_length']}}|{{parsed['KeyEvents']['total_loss']}}|{{'%.2f'|format(parsed['KeyEvents']['total_loss']/parsed['KeyEvents']['fiber_length'])}}|{{parsed['KeyEvents']['events']|length}}|
 {%- endfor %}
+"""
+
+
+MAKEFILE = """
+all:
+
+help:
+\t@echo "make help"
+\t@echo "make pdf"
+
+pdf:
+\tpandoc -h
 """
 
 
@@ -78,32 +88,19 @@ def main():
     args = parser.parse_args()
 
 
-    with tempfile.TemporaryDirectory(prefix='sor2md', delete=False) as tmpdir:
-        os.chdir(tmpdir.name)
+    with tempfile.TemporaryDirectory(prefix='sor2md') as tmpdir:
 
-        # Write the header
-        #
-        with open('00-header', 'wt') as fp:
-            fp.write(f"# OTDR Report"
-                    "**Created: {datetime.datetime.now()}")
+        traces = []
 
+        for infile in args.infiles:
+            with open(infile, "rb") as fp:
+                parsed = otdrparser.parse2(fp)
+                traces.append((infile, parsed))
 
-    for infile in args.infiles:
-        with open(infile, "rb") as fp:
+        template = jinja2.Template(TEMPLATE)
 
-            datablock = otdrparser.parse(fp)[5]
+        print(template.render(traces=traces))
 
-            x_values = []
-            y_values = []
-
-
-            for datapoint in datablock['data_points']:
-                x_values.append(datapoint[0])   # Distance
-                y_values.append(datapoint[1])   # Signal
-
-            plt.plot(x_values, y_values)
-
-    plt.savefig(args.outfile)
 
 
 
