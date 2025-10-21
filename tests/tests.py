@@ -7,8 +7,7 @@ sys.path.append('..')
 import otdrparser
 
 ALL_SOR_FILES = glob.glob('*.sor')
-ISSUE9_SOR_FILE = ['issue9.sor']
-ISSUE11_SOR_FILE = ['issue11.sor', 'issue9.sor']
+ISSUE9_SOR_FILES = ['issue9.sor']
 
 @parameterized.parameterized(ALL_SOR_FILES)
 def test_parsing(sor_file):
@@ -27,7 +26,7 @@ def test_datapoints(sor_file):
                 assert 'data_points' in block
 
 
-@parameterized.parameterized(ISSUE9_SOR_FILE)
+@parameterized.parameterized(ISSUE9_SOR_FILES)
 def test_issue9(sor_file):
     """Consider index of refraction when calculating speed of light
        in fibre optic cables.
@@ -88,3 +87,22 @@ def test_issue11(sor_file):
         recurse(blocks)
 
 
+ISSUE11_SOR_FILES = ALL_SOR_FILES
+ISSUE11_SOR_FILES.remove('otdr7.sor')   # This trace does not contain KeyEvents
+
+@parameterized.parameterized(ISSUE11_SOR_FILES)
+def test_issue12(sor_file):
+    """Return parsed data as dictionary.
+    """
+
+    with open(sor_file, 'rb') as fp:
+        data = otdrparser.parse2(fp)
+        assert 'Map' in data
+        assert 'GenParams' in data
+        assert 'SupParams' in data
+        assert 'FxdParams' in data
+        assert 'DataPts' in data
+        assert 'KeyEvents' in data
+        assert 'Cksum' in data
+
+        assert 'maps' in data['Map']
