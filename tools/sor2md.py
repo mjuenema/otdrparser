@@ -4,6 +4,11 @@
    in Markdown syntax. The generated markdown file can then
    be converted into other formats using the 'pandoc' tool.
 
+   The unit for distances is hard-coded as meters, simply 
+   because that's what I am working with in Australia. If 
+   your OTDR works with a different unit then distances
+   may be off.
+
 """
 
 import argparse
@@ -57,15 +62,45 @@ import jinja2
 
 TEMPLATE = """
 # OTDR Report
-**Created on {{ created }}
+Created on {{ created.strftime('%x %X') }}
 
 ## Overview
 
-|File |Wavelength [nm]|Distance|Loss [dB]|Loss/Km [dB]|Events|
+|File |Wavelength [nm]|Distance [m]|Loss [dB]|Loss/Distance [dB]|Events|
 | :------------ |------------ |------------ |--- |--- |
 {%- for (filename, parsed) in traces %}
-|{{filename}}|{{parsed['FxdParams']['wavelength']}}|{{parsed['KeyEvents']['fiber_length']}}|{{parsed['KeyEvents']['total_loss']}}|{{'%.2f'|format(parsed['KeyEvents']['total_loss']/parsed['KeyEvents']['fiber_length'])}}|{{parsed['KeyEvents']['events']|length}}|
+|{{filename}}|{{parsed['FxdParams']['wavelength']}}|{{'%.1f'|format(parsed['KeyEvents']['fiber_length'])}}|{{'%.2f'|format(parsed['KeyEvents']['total_loss'])}}|{{'%.2f'|format(parsed['KeyEvents']['total_loss']/parsed['KeyEvents']['fiber_length']*1000)}}|{{parsed['KeyEvents']['events']|length}}|
 {%- endfor %}
+
+{%- for (filename, parsed) in traces %}
+## {{ filename }}
+
+**File name:** {{ filename }}
+**Date/Time:** {{ parsed['FxdParams']['date_time'] }} FIXME
+**Cable ID:** {{ parsed['GenParams']['cable_id'] }}
+**Fiber ID:** {{ parsed['GenParams']['fibre_id'] }}
+**Fiber Type:** {{ parsed['GenParams']['fiber_type_description'] }}
+**Operator**: {{ parsed['GenParams']['operator'] }}
+**Comments:** {{ parsed['GenParams']['comments'] }}
+**OTDR:** {{ parsed['SupParams']['supplier_name'] }} {{ parsed['SupParams']['otdr_name'] }} (#{{ parsed['SupParams']['otdr_serial_number'] }})
+**Serial #:** 1111 / 652
+**Software version:** 7.22
+**Location A:**
+**Location B:**
+**Wavelength:** 1310
+**Index of refraction:** 1.47
+
+GRAPH
+
+**Length:** 2300 m
+**Loss:** 2.34 dB
+**Loss/Km:** 1.01 dB
+ 
+|Event|No|Position [km]|Loss [dB]|Reflectance [dB]|Cumulative Loss [dB]
+|:---|---|---:|---:|---:|---:|
+|Non-Reflective|1|0.526|0.339|**-54.4**|0.339|
+
+{% endfor %}
 """
 
 
@@ -79,6 +114,14 @@ help:
 pdf:
 \tpandoc -h
 """
+
+
+# For some obscure reason the next two lines are required
+# to produce a timestamp in the correct locale.
+# https://forums.raspberrypi.com/viewtopic.php?t=291069
+#
+from locale import setlocale, LC_TIME
+setlocale(LC_TIME, "")
 
 
 
@@ -98,6 +141,7 @@ def main():
                 traces.append((infile, parsed))
 
         template = jinja2.Template(TEMPLATE)
+        template.globals.update({'created': datetime.datetime.now()})
 
         print(template.render(traces=traces))
 

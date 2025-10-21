@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## 0.2.0 - Not yet released
 * Added ``parse2()`` method that returns that parsed trace file as a dictionary keyed by block name.
+* Corrected calculation of ``fiber_start_position`` and ``fibre_length`` values in ``KeyEvents`` block.
 * Added ``tools/sor2md.py`` script to generate a report in Markdown format.
 
 ## 0.1.5 - 2025-10-14
