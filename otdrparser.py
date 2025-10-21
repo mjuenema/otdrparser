@@ -471,7 +471,7 @@ def parse_unknown_block(fp, block_numbytes):
 
 
 def parse(fp):
-    """The ``parse()`` function is the public interface of this library."""
+    """Parse trace file and return as list of parsed blocks."""
 
     # The Map block is always the first block in the file.
     #
@@ -511,6 +511,15 @@ def parse(fp):
             blocks += [parse_unknown_block(fp, block_numbytes)]
 
     return blocks
+
+
+
+def parse2(fp):
+    """Parse trace file and return as dictionary keyed by block name."""
+
+    blocks = parse(fp)
+
+    return {block['name']: block for block in blocks}
 
 
 
