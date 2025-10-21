@@ -7,7 +7,6 @@ sys.path.append('..')
 import otdrparser
 
 ALL_SOR_FILES = glob.glob('*.sor')
-ISSUE9_SOR_FILES = ['issue9.sor']
 
 @parameterized.parameterized(ALL_SOR_FILES)
 def test_parsing(sor_file):
@@ -25,6 +24,8 @@ def test_datapoints(sor_file):
             if block['name'] == 'DataPts':
                 assert 'data_points' in block
 
+
+ISSUE9_SOR_FILES = ['issue9.sor']
 
 @parameterized.parameterized(ISSUE9_SOR_FILES)
 def test_issue9(sor_file):
@@ -85,6 +86,16 @@ def test_issue11(sor_file):
         blocks = otdrparser.parse(fp)
 
         recurse(blocks)
+
+
+ISSUE10_SOR_FILES = ['issue10a.sor']
+@parameterized.parameterized(ISSUE10_SOR_FILES)
+def test_issue10a(sor_file):
+
+    with open(sor_file, 'rb') as fp:
+        data = otdrparser.parse2(fp)
+        assert data['KeyEvents']['fiber_start_position'] == -1002.3040072262725
+        assert data['KeyEvents']['fiber_length'] == 619.8066597773387
 
 
 ISSUE11_SOR_FILES = ALL_SOR_FILES

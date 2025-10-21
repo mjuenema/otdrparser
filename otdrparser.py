@@ -417,11 +417,11 @@ def parse_keyevents_block(fp, block_numbytes, index_of_refraction):
     data.update(
         {
             "total_loss": read_signed4(block_fp) * 0.001,
-            "fiber_start_position": read_signed4(block_fp),
-            "fiber_length": read_unsigned4(block_fp),
+            "fiber_start_position": read_signed4(block_fp) / 10000 * C_M / index_of_refraction,
+            "fiber_length": read_unsigned4(block_fp) / 10000 * C_M/ index_of_refraction,
             "optical_return_loss": read_unsigned2(block_fp) * 0.001,
-            "fiber_start_position2": read_signed4(block_fp),
-            "fiber_length2": read_unsigned4(block_fp),
+            "fiber_start_position2": read_signed4(block_fp) / 10000 * C_M/ index_of_refraction,
+            "fiber_length2": read_unsigned4(block_fp) / 10000 * C_M/ index_of_refraction,
         }
     )
 
