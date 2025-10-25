@@ -26,7 +26,7 @@ def main():
     args = parser.parse_args()
 
     with open(args.filename, "rb") as fp:
-        print(json.dumps(otdrparser.parse(fp), cls=BytesEncoder, indent=2))
+        print(json.dumps(otdrparser.parse2(fp), cls=BytesEncoder, indent=2))
 
 
 if __name__ == "__main__":

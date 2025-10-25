@@ -1,9 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## 0.2.0 - Not yet released
-* Added ``parse2()`` method that returns that parsed trace file as a dictionary keyed by block name.
-* Added ``tools/sor2md.py`` script to generate a report in Markdown format.
+## Future
+* Add ``tools/`` scripts as I need them.
+* Fix bugs.
+
+## 0.2.0 - 2025-10-25
+* Added ``parse2()`` method that returns the parsed trace file as a dictionary keyed by block name.
 
 ## 0.1.5 - 2025-10-14
 * Fixed mis-spelled 'acquisition' (https://github.com/mjuenema/otdrparser/issues/11)
