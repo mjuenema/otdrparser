@@ -14,3 +14,6 @@ build-backend = "flit_core.buildapi"
 
 [project.urls]
 Home = "https://github.com/mjuenema/otdrparser"
+
+[tool.flit.sdist]
+exclude = ["tests/*", "tools/*"]
