@@ -26,8 +26,8 @@ with open('my_trace_file.sor', 'rb') as fp:
 * Vendor proprietary blocks are included as raw bytes.
 * Some data is interpreted. For example ```fibre_type=652``` is also interpreted as ```"ITU-T G.652 (standard single-mode fiber)"```
 
-Output of the ``.parse2()`` method converted into JSON: [example-parse2.json](example-parse2.json).
+Output of the ``.parse2()`` method converted into JSON: [example-parse2.json](https://github.com/mjuenema/otdrparser/blob/main/example-parse2.json).
 
 The ``otdrparser.parse()`` method is now considered legacy. It returns the blocks as a list.
 
-Output of the ``.parse()`` method converted into JSON: [example-parse.json](example-parse.json).
+Output of the ``.parse()`` method converted into JSON: [example-parse.json](https://github.com/mjuenema/otdrparser/blob/main/example-parse.json)).
