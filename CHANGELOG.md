@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 * Add ``tools/`` scripts as I need them.
 * Fix bugs.
 
+## 0.2.1 - 2025-10-25
+* Made links to example output on Github absolute so it also works on PyPi.
+* No changes to code.
+
 ## 0.2.0 - 2025-10-25
 * Added ``parse2()`` method that returns the parsed trace file as a dictionary keyed by block name.
 

@@ -1,6 +1,6 @@
 [project]
 name = "otdrparser"
-version = "0.2.0"
+version = "0.2.1"
 description = "Python library for parsing OTDR files in Telcordia SR-4731 Version 2 format"
 authors = [
    {name = "Markus Juenemann", email = "markus@juenemann.net"}
