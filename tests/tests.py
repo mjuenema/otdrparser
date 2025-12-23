@@ -11,7 +11,7 @@ ALL_SOR_FILES = glob.glob('*.sor')
 @parameterized.parameterized(ALL_SOR_FILES)
 def test_parsing(sor_file):
     with open(sor_file, 'rb') as fp:
-        blocks = otdrparser.parse(fp)
+        otdrparser.parse(fp)
 
 
 @parameterized.parameterized(ALL_SOR_FILES)
@@ -121,3 +121,10 @@ def test_issue12(sor_file):
         assert 'Cksum' in data
 
         assert 'maps' in data['Map']
+        
+@parameterized.parameterized(ALL_SOR_FILES)
+def test_issue14(sor_file):
+    with open(sor_file, 'rb') as fp:
+        data = otdrparser.parse2(fp)
+        assert "GenParams" in data
+        assert data["GenParams"]["name"] == "GenParams"

@@ -253,12 +253,23 @@ def parse_map_block(fp):
 
 
 def parse_genparams_block(fp, block_numbytes):
-    """Parse a General parameters block."""
+    """Parse a general parameters block."""
+    
+    def read_genparams_name(block_fp):
+        """The "GenParams" name of the general parameters block is sometimes
+           followed by "\x00" and sometimes not (issue 14)
+        """
+        
+        name = read_zero_terminated_string(block_fp)
+        if read_fixed_length_string(block_fp, 1) != "\x00":
+            block_fp.seek(-1, 1)
+        return name
+        
 
     block_fp = io.BytesIO(fp.read(block_numbytes))
-
+ 
     data = {
-        "name": read_zero_terminated_string(block_fp),
+        "name": read_genparams_name(block_fp),
         "cable_id": read_zero_terminated_string(block_fp),
         "fiber_id": read_zero_terminated_string(block_fp),
         "fiber_type": read_unsigned2(block_fp),
