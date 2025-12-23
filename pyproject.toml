@@ -8,6 +8,12 @@ authors = [
 license = { file = "LICENSE" }
 readme = "README.md"
 
+[project.optional-dependencies]
+test = [
+    "pynose",
+    "parameterized",
+]
+
 [build-system]
 requires = ["flit_core>3.2,<4"]
 build-backend = "flit_core.buildapi"

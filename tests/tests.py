@@ -75,11 +75,15 @@ def test_issue11(sor_file):
                 if not isinstance(value, (str, int)):
                     recurse(value)
 
-    with open('/usr/share/dict/words', 'rt') as fp:
-        words = [line.strip().lower() for line in fp]
-    words += ['numbytes', 'numblocks', 'genparams', 'supparams','fxdparams','keyevents',
-              'datapts','spclproprietary', 'cksum', 'otdr', 'backscattering',
-              'position2', 'length2', 'points2', 'chksum']
+    try:
+        with open('/usr/share/dict/words', 'rt') as fp:
+            words = [line.strip().lower() for line in fp]
+        words += ['numbytes', 'numblocks', 'genparams', 'supparams','fxdparams','keyevents',
+                  'datapts','spclproprietary', 'cksum', 'otdr', 'backscattering',
+                  'position2', 'length2', 'points2', 'chksum']
+    except FileNotFoundError:
+        # No /usr/share/dict/words
+        return
 
 
     with open(sor_file, 'rb') as fp:
