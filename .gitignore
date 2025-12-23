@@ -160,3 +160,7 @@ cython_debug/
 #.idea/
 
 playground/
+
+# Eclipse PyDev
+.project
+.pydevproject
