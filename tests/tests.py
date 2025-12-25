@@ -128,3 +128,14 @@ def test_issue14(sor_file):
         data = otdrparser.parse2(fp)
         assert "GenParams" in data
         assert data["GenParams"]["name"] == "GenParams"
+        
+        
+@parameterized.parameterized(ALL_SOR_FILES)
+def test_issue15(sor_file):
+    with open(sor_file, 'rb') as fp:
+        data = otdrparser.parse2(fp)
+        assert "GenParams" in data
+        assert data["GenParams"]["language"] in (None, "EN")
+        assert isinstance(data["GenParams"]["cable_id"], str) or data["GenParams"]["cable_id"] is None
+        assert isinstance(data["GenParams"]["fiber_id"], str)
+        assert data["GenParams"]["wavelength"] in (1310, 1550, 1625, 1650)
