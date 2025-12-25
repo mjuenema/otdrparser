@@ -1,6 +1,5 @@
-Very simple tests to verify that some sample data can be parsed without errors.
 
-The OTDR samples have been copied from the following sources:
+Some OTDR samples have been copied from the following sources:
 
 https://github.com/sid5432/pyOTDR
 * demo_ab.sor
@@ -16,11 +15,3 @@ https://github.com/JamesHarrison/otdrs
 * example4-exfo-ftb4ftbx730c-mfdgainer-1550nm.sor
 * example5-exfo-rtu2ftbx735c-sm7r-ea-hrd.sor
 
-https://github.com/mjuenema/otdrparser/issues/4
-* otdr1.sor
-* otdr2.sor
-* otdr3.sor
-* otdr4.sor
-* otdr5.sor
-* otdr6.sor
-* otdr7.sor
