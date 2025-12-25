@@ -138,4 +138,5 @@ def test_issue15(sor_file):
         assert data["GenParams"]["language"] in (None, "EN")
         assert isinstance(data["GenParams"]["cable_id"], str) or data["GenParams"]["cable_id"] is None
         assert isinstance(data["GenParams"]["fiber_id"], str)
+        assert data["GenParams"]["fiber_type"] in otdrparser.FIBER_TYPES
         assert data["GenParams"]["wavelength"] in (1310, 1550, 1625, 1650)

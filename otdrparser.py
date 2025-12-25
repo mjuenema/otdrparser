@@ -30,8 +30,10 @@
 import struct
 import string
 import io
+from pickle import FALSE
 
 FIBER_TYPES = {
+    0:   "Unknown",
     651: "ITU-T G.651 (multi-mode fiber)",
     652: "ITU-T G.652 (standard single-mode fiber)",
     653: "ITU-T G.653 (dispersion-shifted fiber)",
@@ -295,17 +297,26 @@ def parse_genparams_block(fp, block_numbytes):
         except UnicodeDecodeError:
             return None
         
+    def read_genparms_fibre_type(block_fp):
+        """It can happen that the parser gets lost at this stage so we use the
+           fibre_type (which can only have a known set of values) as an anchor.
+        """ 
+
+        while True:
+            fiber_type = read_signed2(block_fp)
+            if fiber_type in FIBER_TYPES:
+                return fiber_type
+    
 
     block_fp = io.BytesIO(fp.read(block_numbytes))
     
-    #raise Exception
  
     data = {
         "name": read_genparams_name(block_fp),
         "language": read_genparams_language(block_fp),
         "cable_id": read_genparms_cable_id(block_fp),
         "fiber_id": read_zero_terminated_string(block_fp),
-        "fiber_type": read_signed2(block_fp),
+        "fiber_type": read_genparms_fibre_type(block_fp),
         "wavelength": read_unsigned2(block_fp),
         "location_a": read_zero_terminated_string(block_fp),
         "location_b": read_zero_terminated_string(block_fp),
