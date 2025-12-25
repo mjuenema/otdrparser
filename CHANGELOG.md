@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 * Add ``tools/`` scripts as I need them.
 * Fix bugs.
 
+## 0.2.2 - 2025-12-15
+* Implemented work-arounds for odd GenParams blocks.
+* "Stole" trace files from https://github.com/JamesHarrison/otdrs for tests.
+
 ## 0.2.1 - 2025-10-25
 * Made links to example output on Github absolute so it also works on PyPi.
 * No changes to code.

@@ -28,7 +28,7 @@
 """
 
 import struct
-import sys
+import string
 import io
 
 FIBER_TYPES = {
@@ -253,7 +253,17 @@ def parse_map_block(fp):
 
 
 def parse_genparams_block(fp, block_numbytes):
-    """Parse a general parameters block."""
+    """Parse a general parameters block.
+    
+       According to http://morethanfootnotes.blogspot.com/2015/07/the-otdr-optical-time-domain.html
+       
+           The general parameters block starts with the "GenParams\0" heading (string followed by 
+           a terminating '\0' character), then two bytes that indicates the language (EN for English). 
+    
+       It seems that many vendors omit the '\0' character that follows "GenParams\0" and the two 
+       bytes indicating the language may also be missing.  
+    
+    """
     
     def read_genparams_name(block_fp):
         """The "GenParams" name of the general parameters block is sometimes
@@ -264,15 +274,38 @@ def parse_genparams_block(fp, block_numbytes):
         if read_fixed_length_string(block_fp, 1) != "\x00":
             block_fp.seek(-1, 1)
         return name
+    
+    def read_genparams_language(block_fp):
+        """The two language bytes may be missing."""
+        try:
+            language = read_fixed_length_string(block_fp, 2)
+            if language[0] in string.ascii_uppercase and language[1] in string.ascii_uppercase:
+                return language
+            else:
+                block_fp.seek(-2, 1)
+                return None
+        except UnicodeDecodeError:
+            block_fp.seek(-2, 1)
+            return None
+            
+    def read_genparms_cable_id(block_fp):
+        """Sometimes the cable_id seems to be encoded in a way I have not figured out yet."""
+        try:
+            return read_zero_terminated_string(block_fp)
+        except UnicodeDecodeError:
+            return None
         
 
     block_fp = io.BytesIO(fp.read(block_numbytes))
+    
+    #raise Exception
  
     data = {
         "name": read_genparams_name(block_fp),
-        "cable_id": read_zero_terminated_string(block_fp),
+        "language": read_genparams_language(block_fp),
+        "cable_id": read_genparms_cable_id(block_fp),
         "fiber_id": read_zero_terminated_string(block_fp),
-        "fiber_type": read_unsigned2(block_fp),
+        "fiber_type": read_signed2(block_fp),
         "wavelength": read_unsigned2(block_fp),
         "location_a": read_zero_terminated_string(block_fp),
         "location_b": read_zero_terminated_string(block_fp),
