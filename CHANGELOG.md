@@ -3,7 +3,15 @@ All notable changes to this project will be documented in this file.
 
 ## Future
 * Add ``tools/`` scripts as I need them.
-* Fix bugs.
+* Correct the fixed-parameter units and signs for range, averaging time,
+  reflection threshold, and end-of-transmission threshold.
+* Decode signed GenParams offsets correctly.
+* Decode key-event marker positions as signed values.
+* Restore Latin-1 decoding for textual metadata.
+* Raise ``OTDRParserError`` for truncated, malformed, or unsupported input
+  instead of hanging, leaking ``struct.error``, or returning incomplete data.
+* Accept Version 2.x SOR files and explicitly reject unsupported major versions
+  and multi-trace input.
 
 ## 0.2.2 - 2025-12-15
 * Implemented work-arounds for odd GenParams blocks.
