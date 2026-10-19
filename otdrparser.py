@@ -30,7 +30,22 @@
 import struct
 import string
 import io
-from pickle import FALSE
+
+
+class OTDRParserError(ValueError):
+    """Raised when an OTDR file is truncated, malformed or unsupported."""
+
+
+def read_exact(fp, size):
+    """Read exactly *size* bytes or raise a descriptive parser error."""
+
+    data = fp.read(size)
+    if len(data) != size:
+        raise OTDRParserError(
+            f"Unexpected end of file: expected {size} bytes, got {len(data)}"
+        )
+    return data
+
 
 FIBER_TYPES = {
     0:   "Unknown",
@@ -100,8 +115,11 @@ def read_zero_terminated_string(fp):
     while True:
         c = fp.read(1)
 
+        if c == b"":
+            raise OTDRParserError("Unexpected end of file while reading a string")
+
         if c == b"\x00":
-            return s.decode().strip()
+            return s.decode("latin-1").strip()
         s += c
 
 
@@ -116,7 +134,7 @@ def read_fixed_length_string(fp, n):
         unicode: Read unicode string, stripped off leading and trailing white space.
     """
 
-    return fp.read(n).decode().strip()
+    return read_exact(fp, n).decode("latin-1").strip()
 
 
 def read_unsigned2(fp):
@@ -129,7 +147,7 @@ def read_unsigned2(fp):
         int: The bytes read interpreted as an unsigned integer.
     """
 
-    return struct.unpack("<H", fp.read(2))[0]
+    return struct.unpack("<H", read_exact(fp, 2))[0]
 
 
 def read_unsigned4(fp):
@@ -142,7 +160,7 @@ def read_unsigned4(fp):
         int: The bytes read interpreted as an unsigned integer.
     """
 
-    return struct.unpack("<I", fp.read(4))[0]
+    return struct.unpack("<I", read_exact(fp, 4))[0]
 
 
 def read_signed2(fp):
@@ -155,11 +173,11 @@ def read_signed2(fp):
         int: The bytes read interpreted as a signed integer.
     """
 
-    return struct.unpack("<h", fp.read(2))[0]
+    return struct.unpack("<h", read_exact(fp, 2))[0]
 
 
 def read_signed4(fp):
-    """Read 4 bytes and return a little-endian unsigned integer.
+    """Read 4 bytes and return a little-endian signed integer.
 
     Args:
         fp (file): File object of the opened SOR file.
@@ -168,7 +186,7 @@ def read_signed4(fp):
         int: The bytes read interpreted as a signed integer.
     """
 
-    return struct.unpack("<i", fp.read(4))[0]
+    return struct.unpack("<i", read_exact(fp, 4))[0]
 
 
 def interpret_event_type(event_type):
@@ -242,14 +260,30 @@ def parse_map_block(fp):
         "maps": [],
     }
 
-    for _ in range(1, data["numblocks"]):
-        data["maps"].append(
-            {
-                "name": read_zero_terminated_string(fp),
-                "version": str(read_unsigned2(fp) / 100),
-                "numbytes": read_unsigned4(fp),
-            }
+    if data["name"] != "Map":
+        raise OTDRParserError(
+            f"Unsupported file header {data['name']!r}; expected 'Map'"
         )
+
+    if not data["version"].startswith("2."):
+        raise OTDRParserError(
+            f"Unsupported SOR version {data['version']}; only version 2 is supported"
+        )
+
+    if data["numbytes"] <= 0 or data["numblocks"] < 1:
+        raise OTDRParserError("Invalid Map block size or block count")
+
+    for _ in range(1, data["numblocks"]):
+        entry = {
+            "name": read_zero_terminated_string(fp),
+            "version": str(read_unsigned2(fp) / 100),
+            "numbytes": read_unsigned4(fp),
+        }
+        if entry["numbytes"] <= 0:
+            raise OTDRParserError(
+                f"Invalid size for block {entry['name']!r}: {entry['numbytes']}"
+            )
+        data["maps"].append(entry)
 
     return data
 
@@ -290,13 +324,6 @@ def parse_genparams_block(fp, block_numbytes):
             block_fp.seek(-2, 1)
             return None
             
-    def read_genparms_cable_id(block_fp):
-        """Sometimes the cable_id seems to be encoded in a way I have not figured out yet."""
-        try:
-            return read_zero_terminated_string(block_fp)
-        except UnicodeDecodeError:
-            return None
-        
     def read_genparms_fibre_type(block_fp):
         """It can happen that the parser gets lost at this stage so we use the
            fibre_type (which can only have a known set of values) as an anchor.
@@ -308,13 +335,13 @@ def parse_genparams_block(fp, block_numbytes):
                 return fiber_type
     
 
-    block_fp = io.BytesIO(fp.read(block_numbytes))
+    block_fp = io.BytesIO(read_exact(fp, block_numbytes))
     
  
     data = {
         "name": read_genparams_name(block_fp),
         "language": read_genparams_language(block_fp),
-        "cable_id": read_genparms_cable_id(block_fp),
+        "cable_id": read_zero_terminated_string(block_fp),
         "fiber_id": read_zero_terminated_string(block_fp),
         "fiber_type": read_genparms_fibre_type(block_fp),
         "wavelength": read_unsigned2(block_fp),
@@ -322,8 +349,8 @@ def parse_genparams_block(fp, block_numbytes):
         "location_b": read_zero_terminated_string(block_fp),
         "cable_code": read_zero_terminated_string(block_fp),
         "build_condition": read_fixed_length_string(block_fp, 2),
-        "user_offset": read_unsigned4(block_fp),
-        "user_offset_distance": read_unsigned4(block_fp),
+        "user_offset": read_signed4(block_fp),
+        "user_offset_distance": read_signed4(block_fp),
         "operator": read_zero_terminated_string(block_fp),
         "comments": read_zero_terminated_string(block_fp),
     }
@@ -339,7 +366,7 @@ def parse_genparams_block(fp, block_numbytes):
 def parse_supparams_block(fp, block_numbytes):
     """Parse a Supplier parameters block."""
 
-    block_fp = io.BytesIO(fp.read(block_numbytes))
+    block_fp = io.BytesIO(read_exact(fp, block_numbytes))
 
     data = {
         "name": read_zero_terminated_string(block_fp),
@@ -367,7 +394,7 @@ def parse_fxdparams_block(fp, block_numbytes):
 
     """
 
-    block_fp = io.BytesIO(fp.read(block_numbytes))
+    block_fp = io.BytesIO(read_exact(fp, block_numbytes))
 
     data = {
         "name": read_zero_terminated_string(block_fp),
@@ -377,30 +404,44 @@ def parse_fxdparams_block(fp, block_numbytes):
         "acquisition_offset": read_signed4(block_fp),
         "acquisition_offset_distance": read_signed4(block_fp),
         "number_of_pulse_width_entries": read_unsigned2(block_fp),
+    }
+
+    if data["number_of_pulse_width_entries"] != 1:
+        raise OTDRParserError(
+            "Multiple pulse-width entries are not supported "
+            f"(found {data['number_of_pulse_width_entries']})"
+        )
+
+    data.update({
         "pulse_width": read_unsigned2(block_fp),
         "sample_spacing": read_unsigned4(block_fp),
         "number_of_data_points": read_unsigned4(block_fp),
         "index_of_refraction": read_unsigned4(block_fp) / 100000,
         "backscattering_coefficient": read_unsigned2(block_fp) * -0.1,
         "number_of_averages": read_unsigned4(block_fp),
-        "averaging_time": read_unsigned2(block_fp),
-        "range": read_unsigned4(block_fp) * 2 * 10**5,
+        "averaging_time": read_unsigned2(block_fp) * 0.1,
+        "range": read_unsigned4(block_fp) * 2 * 10**-5,
         "acquisition_range_distance": read_signed4(block_fp),
         "front_panel_offset": read_signed4(block_fp),
         "noise_floor_level": read_unsigned2(block_fp),
         "noise_floor_scaling_factor": read_signed2(block_fp),
         "power_offset_first_point": read_unsigned2(block_fp),
         "loss_threshold": read_unsigned2(block_fp) * 0.001,
-        "reflection_threshold": read_unsigned2(block_fp) * 0.001,
-        "end_of_transmission_threshold": read_unsigned2(block_fp) * -0.001,
+        "reflection_threshold": read_unsigned2(block_fp) * -0.001,
+        "end_of_transmission_threshold": read_unsigned2(block_fp) * 0.001,
         "trace_type": read_fixed_length_string(block_fp, 2),
         "x1": read_signed4(block_fp),
         "y1": read_signed4(block_fp),
         "x2": read_signed4(block_fp),
         "y2": read_signed4(block_fp),
-    }
+    })
 
     block_fp.close()
+
+    if data["sample_spacing"] <= 0:
+        raise OTDRParserError("Sample spacing must be positive")
+    if data["index_of_refraction"] <= 0:
+        raise OTDRParserError("Index of refraction must be positive")
 
     data["trace_type_description"] = TRACE_TYPES.get(data["trace_type"])
 
@@ -410,16 +451,33 @@ def parse_fxdparams_block(fp, block_numbytes):
 def parse_datapts_block(fp, block_numbytes, sample_spacing, index_of_refraction):
     """Parse Data Points block."""
 
-    block_fp = io.BytesIO(fp.read(block_numbytes))
+    block_fp = io.BytesIO(read_exact(fp, block_numbytes))
 
     data = {
         "name": read_zero_terminated_string(block_fp),
         "number_of_data_points": read_unsigned4(block_fp),
         "number_of_traces": read_unsigned2(block_fp),
+    }
+
+    if data["number_of_traces"] != 1:
+        raise OTDRParserError(
+            "Multiple traces are not supported "
+            f"(found {data['number_of_traces']})"
+        )
+
+    data.update({
         "number_of_data_points2": read_unsigned4(block_fp),
         "scaling_factor": read_unsigned2(block_fp),
         "data_points": [],
-    }
+    })
+
+    if data["number_of_data_points2"] != data["number_of_data_points"]:
+        raise OTDRParserError(
+            "DataPts point counts disagree: "
+            f"{data['number_of_data_points']} != {data['number_of_data_points2']}"
+        )
+    if data["scaling_factor"] <= 0:
+        raise OTDRParserError("DataPts scaling factor must be positive")
 
     for n in range(0, data["number_of_data_points"]):
         data["data_points"].append(
@@ -437,7 +495,7 @@ def parse_datapts_block(fp, block_numbytes, sample_spacing, index_of_refraction)
 def parse_keyevents_block(fp, block_numbytes, index_of_refraction):
     """Parse Key Events block."""
 
-    block_fp = io.BytesIO(fp.read(block_numbytes))
+    block_fp = io.BytesIO(read_exact(fp, block_numbytes))
 
     data = {
         "name": read_zero_terminated_string(block_fp),
@@ -453,11 +511,11 @@ def parse_keyevents_block(fp, block_numbytes, index_of_refraction):
             "splice_loss": read_signed2(block_fp) * 0.001,
             "reflection_loss": read_signed4(block_fp) * 0.001,
             "event_type": read_fixed_length_string(block_fp, 8),
-            "end_of_previous_event": read_unsigned4(block_fp),
-            "beginning_of_current_event": read_unsigned4(block_fp),
-            "end_of_current_event": read_unsigned4(block_fp),
-            "beginning_of_next_event": read_unsigned4(block_fp),
-            "peak_point": read_unsigned4(block_fp),
+            "end_of_previous_event": read_signed4(block_fp),
+            "beginning_of_current_event": read_signed4(block_fp),
+            "end_of_current_event": read_signed4(block_fp),
+            "beginning_of_next_event": read_signed4(block_fp),
+            "peak_point": read_signed4(block_fp),
             "comment": read_zero_terminated_string(block_fp),
         }
 
@@ -473,10 +531,10 @@ def parse_keyevents_block(fp, block_numbytes, index_of_refraction):
         {
             "total_loss": read_signed4(block_fp) * 0.001,
             "fiber_start_position": read_signed4(block_fp) / 10000 * C_M / index_of_refraction,
-            "fiber_length": read_unsigned4(block_fp) / 10000 * C_M/ index_of_refraction,
+            "fiber_length": read_signed4(block_fp) / 10000 * C_M/ index_of_refraction,
             "optical_return_loss": read_unsigned2(block_fp) * 0.001,
             "fiber_start_position2": read_signed4(block_fp) / 10000 * C_M/ index_of_refraction,
-            "fiber_length2": read_unsigned4(block_fp) / 10000 * C_M/ index_of_refraction,
+            "fiber_length2": read_signed4(block_fp) / 10000 * C_M/ index_of_refraction,
         }
     )
 
@@ -489,7 +547,7 @@ def parse_chksum_block(fp, block_numbytes):
     """Parse Chksum block."""
 
 
-    block_fp = io.BytesIO(fp.read(block_numbytes))
+    block_fp = io.BytesIO(read_exact(fp, block_numbytes))
 
     data = {
         "name": read_zero_terminated_string(block_fp),
@@ -512,7 +570,7 @@ def parse_unknown_block(fp, block_numbytes):
         n (int): The size of the block, including its name.
     """
 
-    block_fp = io.BytesIO(fp.read(block_numbytes))
+    block_fp = io.BytesIO(read_exact(fp, block_numbytes))
 
     name = read_zero_terminated_string(block_fp)
 
@@ -544,26 +602,48 @@ def parse(fp):
     #
     for entry in blocks[0]["maps"]:
         block_name = entry["name"]
-        block_version = entry['version']
         block_numbytes = entry['numbytes']
 
         if block_name == "GenParams":
-            blocks += [parse_genparams_block(fp, block_numbytes)]
+            block = parse_genparams_block(fp, block_numbytes)
         elif block_name == "SupParams":
-            blocks += [parse_supparams_block(fp, block_numbytes)]
+            block = parse_supparams_block(fp, block_numbytes)
         elif block_name == "FxdParams":
-            blocks += [parse_fxdparams_block(fp, block_numbytes)]
+            block = parse_fxdparams_block(fp, block_numbytes)
             # pulse_width = blocks[-1]["pulse_width"]
-            sample_spacing = blocks[-1]["sample_spacing"]
-            index_of_refraction = blocks[-1]["index_of_refraction"]
+            sample_spacing = block["sample_spacing"]
+            index_of_refraction = block["index_of_refraction"]
         elif block_name == "DataPts":
-            blocks += [parse_datapts_block(fp, block_numbytes, sample_spacing, index_of_refraction)]
+            if sample_spacing is None or index_of_refraction is None:
+                raise OTDRParserError(
+                    "DataPts block encountered before FxdParams block"
+                )
+            block = parse_datapts_block(
+                fp, block_numbytes, sample_spacing, index_of_refraction
+            )
         elif block_name == "KeyEvents":
-            blocks += [parse_keyevents_block(fp, block_numbytes, index_of_refraction)]
+            if index_of_refraction is None:
+                raise OTDRParserError(
+                    "KeyEvents block encountered before FxdParams block"
+                )
+            block = parse_keyevents_block(fp, block_numbytes, index_of_refraction)
         elif block_name == "Cksum":
-            blocks += [parse_chksum_block(fp, block_numbytes)]
+            block = parse_chksum_block(fp, block_numbytes)
         else:
-            blocks += [parse_unknown_block(fp, block_numbytes)]
+            block = parse_unknown_block(fp, block_numbytes)
+
+        if block["name"] != block_name:
+            raise OTDRParserError(
+                f"Block map expected {block_name!r}, found {block['name']!r}"
+            )
+        blocks.append(block)
+
+    block_names = {block["name"] for block in blocks}
+    missing = {"FxdParams", "DataPts"} - block_names
+    if missing:
+        raise OTDRParserError(
+            "Missing required SOR block(s): " + ", ".join(sorted(missing))
+        )
 
     return blocks
 
@@ -585,5 +665,3 @@ if __name__ == '__main__':
 
     for block in blocks:
         print(block['name'])
-
-
