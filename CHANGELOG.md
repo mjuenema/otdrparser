@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 
 ## Future
 * Add ``tools/`` scripts as I need them.
+
+# 0.2.3 - 26-10-20
 * Correct the fixed-parameter units and signs for range, averaging time,
   reflection threshold, and end-of-transmission threshold.
 * Decode signed GenParams offsets correctly.
@@ -12,6 +14,7 @@ All notable changes to this project will be documented in this file.
   instead of hanging, leaking ``struct.error``, or returning incomplete data.
 * Accept Version 2.x SOR files and explicitly reject unsupported major versions
   and multi-trace input.
+* Big thanks to https://github.com/heydenb for all of above!
 
 ## 0.2.2 - 2025-12-15
 * Implemented work-arounds for odd GenParams blocks.
