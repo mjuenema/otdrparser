@@ -13,14 +13,14 @@ test:
 
 
 build: test
-	flit build --setup-py --format wheel
-	flit build --setup-py --format sdist
+	flit build --format wheel
+	flit build --format sdist
 
 
 testpublish: build
-	flit publish --repository=testpypi --setup-py --format wheel
-	flit publish --repository=testpypi --setup-py --format sdist
+	flit publish --repository=testpypi --format wheel
+	flit publish --repository=testpypi --format sdist
 
 publish: build
-	flit publish --repository=pypi --setup-py --format wheel
-	flit publish --repository=pypi --setup-py --format sdist
+	flit publish --repository=pypi --format wheel
+	flit publish --repository=pypi --format sdist
